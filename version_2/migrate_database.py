@@ -13,16 +13,34 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
 db_file = 'csgoempire_monitor.db'
+backup_dir = 'backup'
 
-# Delete old database if exists
+# Backup old database if exists
 if os.path.exists(db_file):
-    print(f"Removing old database: {db_file}")
+    # Create backup directory if it doesn't exist
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+        print(f"Created backup directory: {backup_dir}")
+
+    # Generate backup filename with timestamp
+    timestamp = time.strftime('%Y%m%d_%H%M%S')
+    backup_file = os.path.join(backup_dir, f'csgoempire_monitor_{timestamp}.db')
+
+    print(f"Backing up database to: {backup_file}")
     try:
+        import shutil
+        shutil.copy2(db_file, backup_file)
+        print("OK - Database backed up successfully")
+
+        # Now remove the old database
         os.remove(db_file)
         print("OK - Old database removed")
     except PermissionError:
         print("ERROR - Database is locked (close GUI first)")
         print("Close the GUI and run this script again")
+        sys.exit(1)
+    except Exception as e:
+        print(f"ERROR - Backup failed: {e}")
         sys.exit(1)
 
 # Create new database with enhanced schema

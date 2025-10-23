@@ -1,30 +1,63 @@
-# Output folder
-output/
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-env/
-venv/
-ENV/
-build/
-dist/
+*.egg
 *.egg-info/
+dist/
+build/
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Data files
+*.jsonl
+*.csv
+*.json.gz
+
+# Logs
+*.log
+logs/
+tracker.log
+
+# Backup directories
+backup/
+*/backup/
+
+# Output directories
+output/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.DS_Store
 
-# Selenium
-*.log
-geckodriver.log
-chromedriver.log
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.cache/
 
 # Environment variables
 .env
-
+.env.local
