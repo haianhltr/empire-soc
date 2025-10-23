@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys, json; data = json.loads(sys.stdin.read()); payload = data[''''payload''''].split('''','''', 1)[1]; event_data = json.loads(payload)[1][0]; print(json.dumps(event_data, indent=2, sort_keys=True))\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
