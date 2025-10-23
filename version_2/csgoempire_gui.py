@@ -152,19 +152,102 @@ class CSGOEmpireMonitorGUI:
         )
         self.auctions_label.pack(side=tk.LEFT, padx=20, pady=5)
         
-        # Log Frame
-        log_frame = tk.LabelFrame(self.root, text="Activity Log", font=("Arial", 10, "bold"))
+        # Log Frame with Tabs
+        log_frame = tk.LabelFrame(self.root, text="Activity Logs", font=("Arial", 10, "bold"))
         log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
+        # Create notebook (tabbed interface)
+        from tkinter import ttk
+        self.log_notebook = ttk.Notebook(log_frame)
+        self.log_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Processed Log Tab
+        processed_frame = tk.Frame(self.log_notebook)
+        self.log_notebook.add(processed_frame, text="📊 Processed Events")
+
+        # Control frame for processed log
+        processed_control_frame = tk.Frame(processed_frame)
+        processed_control_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        self.save_processed_log = tk.BooleanVar(value=True)
+        save_processed_checkbox = tk.Checkbutton(
+            processed_control_frame,
+            text="💾 Save to tracker.log",
+            variable=self.save_processed_log,
+            font=("Arial", 9)
+        )
+        save_processed_checkbox.pack(side=tk.LEFT)
+
         self.log_text = scrolledtext.ScrolledText(
-            log_frame,
+            processed_frame,
             wrap=tk.WORD,
             font=("Consolas", 9),
             bg="#1e1e1e",
             fg="#00ff00",
             insertbackground="white"
         )
-        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+
+        # Raw Log Tab
+        raw_frame = tk.Frame(self.log_notebook)
+        self.log_notebook.add(raw_frame, text="🔍 Raw Messages")
+
+        # Control frame for raw log options
+        raw_control_frame = tk.Frame(raw_frame)
+        raw_control_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        # First row - format and save options
+        raw_row1 = tk.Frame(raw_control_frame)
+        raw_row1.pack(fill=tk.X, pady=2)
+
+        self.format_raw = tk.BooleanVar(value=True)
+        format_checkbox = tk.Checkbutton(
+            raw_row1,
+            text="📋 Format for readability",
+            variable=self.format_raw,
+            font=("Arial", 9)
+        )
+        format_checkbox.pack(side=tk.LEFT, padx=5)
+
+        self.save_raw_log = tk.BooleanVar(value=True)
+        save_raw_checkbox = tk.Checkbutton(
+            raw_row1,
+            text="💾 Save to raw_tracker.log",
+            variable=self.save_raw_log,
+            font=("Arial", 9)
+        )
+        save_raw_checkbox.pack(side=tk.LEFT, padx=5)
+
+        # Second row - filters
+        raw_row2 = tk.Frame(raw_control_frame)
+        raw_row2.pack(fill=tk.X, pady=2)
+
+        tk.Label(raw_row2, text="Filters:", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
+
+        self.filter_new_item = tk.BooleanVar(value=True)
+        tk.Checkbutton(raw_row2, text="🆕 New Item", variable=self.filter_new_item, font=("Arial", 8)).pack(side=tk.LEFT, padx=2)
+
+        self.filter_auction_update = tk.BooleanVar(value=True)
+        tk.Checkbutton(raw_row2, text="⚔️ Auction Update", variable=self.filter_auction_update, font=("Arial", 8)).pack(side=tk.LEFT, padx=2)
+
+        self.filter_deleted_item = tk.BooleanVar(value=True)
+        tk.Checkbutton(raw_row2, text="🗑️ Deleted Item", variable=self.filter_deleted_item, font=("Arial", 8)).pack(side=tk.LEFT, padx=2)
+
+        self.filter_seller_status = tk.BooleanVar(value=True)
+        tk.Checkbutton(raw_row2, text="👤 Seller Status", variable=self.filter_seller_status, font=("Arial", 8)).pack(side=tk.LEFT, padx=2)
+
+        self.filter_other = tk.BooleanVar(value=True)
+        tk.Checkbutton(raw_row2, text="❓ Other", variable=self.filter_other, font=("Arial", 8)).pack(side=tk.LEFT, padx=2)
+
+        self.raw_log_text = scrolledtext.ScrolledText(
+            raw_frame,
+            wrap=tk.WORD,
+            font=("Consolas", 8),
+            bg="#1e1e1e",
+            fg="#ffaa00",
+            insertbackground="white"
+        )
+        self.raw_log_text.pack(fill=tk.BOTH, expand=True)
         
     def setup_database(self):
         """Create enhanced database schema for snapshot tracking"""
@@ -310,24 +393,36 @@ class CSGOEmpireMonitorGUI:
         self.log_file = open(log_filename, 'a', encoding='utf-8')
         self.log_filename = log_filename
 
+        # Setup raw log file
+        raw_log_filename = "raw_tracker.log"
+        self.raw_log_file = open(raw_log_filename, 'a', encoding='utf-8')
+        self.raw_log_filename = raw_log_filename
+
         # Write session header
         session_start = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         self.log_file.write(f"\n{'='*80}\n")
         self.log_file.write(f"SESSION STARTED: {session_start}\n")
         self.log_file.write(f"{'='*80}\n")
         self.log_file.flush()
 
+        self.raw_log_file.write(f"\n{'='*80}\n")
+        self.raw_log_file.write(f"RAW SESSION STARTED: {session_start}\n")
+        self.raw_log_file.write(f"{'='*80}\n")
+        self.raw_log_file.flush()
+
     def log(self, message):
-        """Add message to log with smart auto-scroll and file logging"""
+        """Add message to processed log with smart auto-scroll and file logging"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_line = f"[{timestamp}] {message}"
 
-        # Write to file
-        try:
-            self.log_file.write(log_line + "\n")
-            self.log_file.flush()  # Ensure it's written immediately
-        except:
-            pass
+        # Write to file only if enabled
+        if self.save_processed_log.get():
+            try:
+                self.log_file.write(log_line + "\n")
+                self.log_file.flush()  # Ensure it's written immediately
+            except:
+                pass
 
         # Check if user is at the bottom before adding new message
         at_bottom = self.log_text.yview()[1] >= 0.99
@@ -339,6 +434,151 @@ class CSGOEmpireMonitorGUI:
             self.log_text.see(tk.END)
 
         self.root.update_idletasks()
+
+    def log_raw(self, event_type, payload):
+        """Add raw WebSocket message to raw log"""
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+
+        # Check filters - skip display if filter is off for this type
+        should_display = False
+        if event_type == "NEW_ITEM" and self.filter_new_item.get():
+            should_display = True
+        elif event_type == "AUCTION_UPDATE" and self.filter_auction_update.get():
+            should_display = True
+        elif event_type == "DELETED_ITEM" and self.filter_deleted_item.get():
+            should_display = True
+        elif event_type == "SELLER_STATUS" and self.filter_seller_status.get():
+            should_display = True
+        elif event_type == "UNKNOWN" and self.filter_other.get():
+            should_display = True
+
+        # Check if we should format for readability
+        if self.format_raw.get():
+            log_line = self.format_readable(event_type, payload, timestamp)
+        else:
+            # Show full raw JSON
+            try:
+                import json
+                if payload.startswith('42'):
+                    # Socket.IO format - extract the JSON part
+                    json_part = payload.split(',', 1)[1] if ',' in payload else payload
+                    data = json.loads(json_part)
+                    formatted = json.dumps(data, indent=2)
+                    log_line = f"[{timestamp}] {event_type}:\n{formatted}\n{'-'*80}\n"
+                else:
+                    log_line = f"[{timestamp}] {event_type}:\n{payload}\n{'-'*80}\n"
+            except:
+                log_line = f"[{timestamp}] {event_type}:\n{payload}\n{'-'*80}\n"
+
+        # Write to raw log file (always save, regardless of filters - filters are display-only)
+        if self.save_raw_log.get():
+            try:
+                self.raw_log_file.write(log_line)
+                self.raw_log_file.flush()
+            except:
+                pass
+
+        # Display only if filter allows
+        if should_display:
+            # Check if user is at the bottom
+            at_bottom = self.raw_log_text.yview()[1] >= 0.99
+
+            self.raw_log_text.insert(tk.END, log_line)
+
+            # Only auto-scroll if user was at the bottom
+            if at_bottom:
+                self.raw_log_text.see(tk.END)
+
+            self.root.update_idletasks()
+
+    def format_readable(self, event_type, payload, timestamp):
+        """Format raw message into readable format showing key info"""
+        try:
+            if event_type == "NEW_ITEM":
+                return self.format_new_item(payload, timestamp)
+            elif event_type == "AUCTION_UPDATE":
+                return self.format_auction_update(payload, timestamp)
+            elif event_type == "DELETED_ITEM":
+                return self.format_deleted_item(payload, timestamp)
+            else:
+                return f"[{timestamp}] {event_type}: {payload[:200]}...\n{'-'*80}\n"
+        except Exception as e:
+            return f"[{timestamp}] {event_type} (format error: {e}):\n{payload[:200]}...\n{'-'*80}\n"
+
+    def format_new_item(self, payload, timestamp):
+        """Format new_item message for readability"""
+        try:
+            # Extract key fields
+            import re
+
+            id_match = re.search(r'"id":(\d+)', payload)
+            name_match = re.search(r'"market_name":"([^"]+)"', payload)
+            price_match = re.search(r'"purchase_price":(\d+)', payload)
+            market_val_match = re.search(r'"market_value":(\d+)', payload)
+            suggested_match = re.search(r'"suggested_price":(\d+)', payload)
+            above_match = re.search(r'"above_recommended_price":([\d.-]+)', payload)
+            wear_match = re.search(r'"wear":([\d.]+)', payload)
+            wear_name_match = re.search(r'"wear_name":"([^"]+)"', payload)
+            auction_match = re.search(r'"auction_ends_at":(\d+|null)', payload)
+
+            # Seller stats
+            online_match = re.search(r'"user_online_status":(\d+)', payload)
+            delivery_recent_match = re.search(r'"delivery_rate_recent":([\d.]+)', payload)
+            delivery_long_match = re.search(r'"delivery_rate_long":([\d.]+)', payload)
+            instant_avail_match = re.search(r'"instant_deposit_available_amount":(\d+)', payload)
+            instant_max_match = re.search(r'"instant_deposit_max_amount":(\d+)', payload)
+
+            item_id = id_match.group(1) if id_match else "?"
+            name = name_match.group(1) if name_match else "Unknown"
+            price = int(price_match.group(1)) / 100.0 if price_match else 0
+            market_val = int(market_val_match.group(1)) / 100.0 if market_val_match else 0
+            suggested = int(suggested_match.group(1)) / 100.0 if suggested_match else 0
+            above = float(above_match.group(1)) if above_match else 0
+            wear = float(wear_match.group(1)) if wear_match else None
+            wear_name = wear_name_match.group(1) if wear_name_match else ""
+            is_auction = auction_match.group(1) != 'null' if auction_match else False
+
+            online = int(online_match.group(1)) if online_match else 0
+            delivery_recent = float(delivery_recent_match.group(1)) if delivery_recent_match else 0
+            delivery_long = float(delivery_long_match.group(1)) if delivery_long_match else 0
+            instant_avail = int(instant_avail_match.group(1)) if instant_avail_match else 0
+            instant_max = int(instant_max_match.group(1)) if instant_max_match else 0
+
+            # Build formatted output
+            lines = [
+                f"[{timestamp}] ══════════════════════════════════════════════════════════════",
+                f"🆕 NEW ITEM",
+                f"├─ ID: {item_id}",
+                f"├─ Name: {name}",
+                f"├─ Wear: {wear_name} ({wear:.4f})" if wear else f"├─ Wear: {wear_name}",
+                f"├─ Type: {'🔨 AUCTION' if is_auction else '💰 FIXED PRICE'}",
+                f"├─ Pricing:",
+                f"│  ├─ Purchase: ${price:,.2f}",
+                f"│  ├─ Market Value: ${market_val:,.2f}",
+                f"│  ├─ Suggested: ${suggested:,.2f}",
+                f"│  └─ Above Recommended: {above:+.2f}%",
+                f"├─ Seller:",
+                f"│  ├─ Online: {'🟢 YES' if online == 1 else '🔴 NO'}",
+                f"│  ├─ Delivery Rate: {delivery_recent:.0%} (recent) / {delivery_long:.0%} (long)",
+                f"│  └─ Instant Deposit: {instant_avail}/{instant_max}",
+                f"└─────────────────────────────────────────────────────────────────",
+                ""
+            ]
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            return f"[{timestamp}] NEW_ITEM (parse error: {e}):\n{payload[:200]}...\n{'-'*80}\n"
+
+    def format_auction_update(self, payload, timestamp):
+        """Format auction_update message for readability"""
+        # Placeholder for now
+        return f"[{timestamp}] AUCTION_UPDATE:\n{payload[:200]}...\n{'-'*80}\n"
+
+    def format_deleted_item(self, payload, timestamp):
+        """Format deleted_item message for readability"""
+        # Placeholder for now
+        return f"[{timestamp}] DELETED_ITEM:\n{payload[:200]}...\n{'-'*80}\n"
         
     def update_status(self, ready, detail):
         """Update status display"""
@@ -514,6 +754,23 @@ class CSGOEmpireMonitorGUI:
                         # Log first message to confirm we're receiving data
                         if message_count == 1:
                             self.log("✓ Receiving WebSocket messages...")
+
+                        # Determine event type for raw log
+                        if '"new_item"' in payload:
+                            event_type = "NEW_ITEM"
+                        elif '"auction_update"' in payload:
+                            event_type = "AUCTION_UPDATE"
+                        elif '"deleted_item"' in payload:
+                            event_type = "DELETED_ITEM"
+                        elif '"updated_seller_online_status"' in payload:
+                            event_type = "SELLER_STATUS"
+                        else:
+                            event_type = "UNKNOWN"
+
+                        # Log raw message
+                        self.log_raw(event_type, payload)
+
+                        # Process the message
                         self.process_message(payload)
             
             cdp.close()
@@ -806,13 +1063,18 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = CSGOEmpireMonitorGUI(root)
 
-    # Close log file when app closes
+    # Close log files when app closes
     def on_closing():
         try:
             session_end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             app.log_file.write(f"SESSION ENDED: {session_end}\n")
             app.log_file.write(f"{'='*80}\n\n")
             app.log_file.close()
+
+            app.raw_log_file.write(f"RAW SESSION ENDED: {session_end}\n")
+            app.raw_log_file.write(f"{'='*80}\n\n")
+            app.raw_log_file.close()
         except:
             pass
         root.destroy()
